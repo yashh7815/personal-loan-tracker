@@ -217,9 +217,18 @@
         import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection, query, serverTimestamp, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Global Firebase Variables (Mandatory Canvas Globals) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // 1. MOCK CONFIGURATION FALLBACK (Allows the app to run outside the canvas environment)
+        const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
         // **REPLACE THIS with your ACTUAL Firebase Config if running outside of a specialized environment.**
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
    // **REPLACE THIS with your ACTUAL Firebase Config if running outside of a specialized environment.**
         const firebaseConfig = {
     apiKey: "AIzaSyBlpcrpLA14LKvQy_G5GELJNIeG9Sn_yIk",
@@ -822,5 +831,6 @@
     </script>
 </body>
 </html>
+
 
 
