@@ -221,15 +221,16 @@
         // 1. MOCK CONFIGURATION FALLBACK (Allows the app to run outside the canvas environment)
         // **REPLACE THIS with your ACTUAL Firebase Config if running outside of a specialized environment.**
    // **REPLACE THIS with your ACTUAL Firebase Config if running outside of a specialized environment.**
-        const MOCK_FIREBASE_CONFIG = {
-            apiKey: "AIzaSy_MOCK_API_KEY_1234567890", // <--- REPLACE THIS VALUE
-            authDomain: "mock-project-id.firebaseapp.com", // <--- REPLACE THIS VALUE
-            projectId: "mock-project-id", // <--- REPLACE THIS VALUE
-            storageBucket: "mock-project-id.appspot.com", // <--- REPLACE THIS VALUE
-            messagingSenderId: "123456789012", // <--- REPLACE THIS VALUE
-            appId: "1:123456789012:web:a1b2c3d4e5f6g7h8i9j0", // <--- REPLACE THIS VALUE
-            measurementId: "G-MOCK-ID" // <--- REPLACE THIS VALUE
-        };
+        const firebaseConfig = {
+    apiKey: "AIzaSyBlpcrpLA14LKvQy_G5GELJNIeG9Sn_yIk",
+    authDomain: "loan-tracker-app-d7e0c.firebaseapp.com",
+    projectId: "loan-tracker-app-d7e0c",
+    storageBucket: "loan-tracker-app-d7e0c.firebasestorage.app",
+    messagingSenderId: "958201169143",
+    appId: "1:958201169143:web:35803b69eb0d18a7a17ff2",
+    measurementId: "G-Q67R68ZWZ3"
+  };
+
         
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-loan-app-id';
         
@@ -821,4 +822,5 @@
     </script>
 </body>
 </html>
+
 
