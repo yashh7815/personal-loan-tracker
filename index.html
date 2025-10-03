@@ -1,317 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Loan Tracker</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
-        .container-card { box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-        .scrollable-list { max-height: 450px; overflow-y: auto; }
-        .scrollable-list::-webkit-scrollbar { width: 6px; }
-        .scrollable-list::-webkit-scrollbar-thumb { background-color: #a0aec0; border-radius: 3px; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #10b981; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Loan Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
+.container-card { box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+.scrollable-list { max-height: 450px; overflow-y: auto; }
+.scrollable-list::-webkit-scrollbar { width: 6px; }
+.scrollable-list::-webkit-scrollbar-thumb { background-color: #a0aec0; border-radius:3px; }
+.spinner { border: 4px solid #f3f3f3; border-top: 4px solid #10b981; border-radius:50%; width:24px; height:24px; animation:spin 1s linear infinite; }
+@keyframes spin {0% {transform:rotate(0deg);}100% {transform:rotate(360deg);}}
+</style>
 </head>
 <body class="min-h-screen p-4 sm:p-8">
 
-<!-- AUTH CONTAINER -->
+<!-- Authentication Container -->
 <div id="auth-container" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow-2xl">
-    <h2 class="text-3xl font-extrabold text-gray-800 mb-6 text-center">Welcome Back!</h2>
-    <div id="auth-error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert"></div>
-    <form id="auth-form" class="space-y-4">
-        <div>
-            <label for="auth-email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <input type="email" id="auth-email" required placeholder="you@example.com"
-                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
-        </div>
-        <div>
-            <label for="auth-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input type="password" id="auth-password" required placeholder="Min 6 characters"
-                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
-        </div>
-        <div class="flex space-x-4 pt-2">
-            <button type="button" id="login-button" 
-                    class="w-full bg-teal-600 text-white p-3 rounded-lg font-semibold hover:bg-teal-700 transition duration-150 disabled:bg-gray-400">
-                Log In
-            </button>
-            <button type="button" id="signup-button"
-                    class="w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-150 disabled:bg-gray-400">
-                Sign Up
-            </button>
-        </div>
-    </form>
+  <h2 class="text-3xl font-extrabold text-gray-800 mb-6 text-center">Welcome Back!</h2>
+  <div id="auth-error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert"></div>
+  <form id="auth-form" class="space-y-4">
+    <div>
+      <label for="auth-email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+      <input type="email" id="auth-email" required placeholder="you@example.com" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+    </div>
+    <div>
+      <label for="auth-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+      <input type="password" id="auth-password" required placeholder="Min 6 characters" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+    </div>
+    <div class="flex space-x-4 pt-2">
+      <button type="button" id="login-button" class="w-full bg-teal-600 text-white p-3 rounded-lg font-semibold hover:bg-teal-700 transition duration-150">Log In</button>
+      <button type="button" id="signup-button" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-150">Sign Up</button>
+    </div>
+  </form>
 </div>
 
-<!-- APP CONTAINER -->
+<!-- Main App -->
 <div id="app" class="max-w-4xl mx-auto hidden">
-    <header class="flex justify-between items-center mb-6">
-        <h1 class="text-4xl font-extrabold text-gray-800 flex items-center">
-            <svg class="w-8 h-8 text-teal-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-            Personal Loan Manager
-        </h1>
-        <button id="signout-button" class="bg-red-500 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-red-600 transition">
-            Sign Out
-        </button>
-    </header>
+<header class="flex justify-between items-center mb-6">
+  <h1 class="text-4xl font-extrabold text-gray-800 flex items-center">Personal Loan Manager</h1>
+  <button id="signout-button" class="bg-red-500 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-red-600 transition">Sign Out</button>
+</header>
 
-    <!-- STATUS -->
-    <div class="mb-6 p-4 bg-white rounded-xl shadow-lg flex justify-between items-center">
-        <p class="text-sm font-medium text-gray-600">
-            Status: <span id="auth-status" class="font-bold text-green-600">Authenticated</span> | User ID:
-            <span id="user-id" class="text-xs text-gray-500 break-all bg-gray-100 p-1 rounded">Loading...</span>
-        </p>
-    </div>
+<!-- User Info -->
+<div class="mb-6 p-4 bg-white rounded-xl shadow-lg flex justify-between items-center">
+  <p class="text-sm font-medium text-gray-600">Status: <span id="auth-status" class="font-bold text-green-600">Authenticated</span> | User ID: <span id="user-id" class="text-xs text-gray-500 break-all bg-gray-100 p-1 rounded">Loading...</span></p>
+</div>
 
-    <!-- SUMMARY STATS -->
-    <div id="summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div class="p-5 bg-white rounded-xl container-card border-l-4 border-teal-500">
-            <p class="text-sm font-medium text-gray-500">Current Active Loans (Unpaid)</p>
-            <p id="total-loaned" class="mt-1 text-3xl font-semibold text-gray-900">--</p>
-        </div>
-        <div class="p-5 bg-white rounded-xl container-card border-l-4 border-amber-500">
-            <p class="text-sm font-medium text-gray-500">Total Money Loaned (All Time)</p>
-            <p id="total-all-time" class="mt-1 text-3xl font-semibold text-gray-900">--</p>
-        </div>
-        <div class="p-5 bg-white rounded-xl container-card border-l-4 border-green-500">
-            <p class="text-sm font-medium text-gray-500 flex justify-between items-center">
-                Total Paid Back
-                <button id="reset-paid-btn" disabled class="text-xs bg-red-100 text-red-600 font-semibold px-2 py-0.5 rounded hover:bg-red-200 transition disabled:opacity-50">
-                    Reset Paid
-                </button>
-            </p>
-            <p id="total-paid" class="mt-1 text-3xl font-semibold text-gray-900">--</p>
-        </div>
-    </div>
+<!-- Summary -->
+<div id="summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+  <div class="p-5 bg-white rounded-xl container-card border-l-4 border-teal-500"><p class="text-sm font-medium text-gray-500">Current Active Loans (Unpaid)</p><p id="total-loaned" class="mt-1 text-3xl font-semibold text-gray-900">--</p></div>
+  <div class="p-5 bg-white rounded-xl container-card border-l-4 border-amber-500"><p class="text-sm font-medium text-gray-500">Total Money Loaned (All Time)</p><p id="total-all-time" class="mt-1 text-3xl font-semibold text-gray-900">--</p></div>
+  <div class="p-5 bg-white rounded-xl container-card border-l-4 border-green-500"><p class="text-sm font-medium text-gray-500">Total Paid Back</p><p id="total-paid" class="mt-1 text-3xl font-semibold text-gray-900">--</p></div>
+</div>
 
-    <!-- ADD LOAN FORM -->
-    <div class="bg-white p-6 rounded-xl container-card mb-8">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Record New Loan</h2>
-        <form id="add-loan-form" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-            <div class="sm:col-span-2">
-                <label for="borrower-name" class="block text-sm font-medium text-gray-700 mb-1">Borrower Name</label>
-                <input type="text" id="borrower-name" required placeholder="e.g., Jane Doe"
-                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
-            </div>
-            <div>
-                <label for="loan-amount" class="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
-                <input type="number" id="loan-amount" required min="0.01" step="0.01" placeholder="e.g., 5000"
-                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
-            </div>
-            <button type="submit" id="submit-button"
-                    class="w-full sm:col-span-1 bg-teal-600 text-white p-2 rounded-lg font-semibold hover:bg-teal-700 transition duration-150">
-                Add Loan
-            </button>
-        </form>
-    </div>
+<!-- Add Loan Form -->
+<div class="bg-white p-6 rounded-xl container-card mb-8">
+<h2 class="text-xl font-bold text-gray-800 mb-4">Record New Loan</h2>
+<form id="add-loan-form" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+  <div class="sm:col-span-2">
+    <label for="borrower-name" class="block text-sm font-medium text-gray-700 mb-1">Borrower Name</label>
+    <input type="text" id="borrower-name" required placeholder="e.g., Jane Doe" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+  </div>
+  <div>
+    <label for="loan-amount" class="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
+    <input type="number" id="loan-amount" required min="0.01" step="0.01" placeholder="e.g., 5000" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+  </div>
+  <button type="submit" id="submit-button" class="w-full sm:col-span-1 bg-teal-600 text-white p-2 rounded-lg font-semibold hover:bg-teal-700 transition duration-150">Add Loan</button>
+</form>
+</div>
 
-    <!-- LOAN RECORDS -->
-    <div class="bg-white p-6 rounded-xl container-card">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Loan Records</h2>
-        <div id="loans-list" class="divide-y divide-gray-100 scrollable-list">
-            <div id="loading-indicator" class="flex justify-center items-center p-8">
-                <div class="spinner"></div>
-                <p class="ml-3 text-gray-500">Loading loan records...</p>
-            </div>
-        </div>
-    </div>
+<!-- Loan List -->
+<div class="bg-white p-6 rounded-xl container-card">
+<h2 class="text-xl font-bold text-gray-800 mb-4">Loan Records</h2>
+<div id="loans-list" class="divide-y divide-gray-100 scrollable-list"></div>
+<p id="no-records-message" class="hidden text-center text-gray-500 py-4">No loans recorded yet.</p>
+</div>
 </div>
 
 <!-- Firebase SDK -->
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, updateDoc, onSnapshot, doc, getDocs, deleteDoc, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // --- REAL FIREBASE CONFIG ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyBlpcrpLA14LKvQy_G5GELJNIeG9Sn_yIk",
-        authDomain: "loan-tracker-app-d7e0c.firebaseapp.com",
-        projectId: "loan-tracker-app-d7e0c",
-        storageBucket: "loan-tracker-app-d7e0c.firebasestorage.app",
-        messagingSenderId: "958201169143",
-        appId: "1:958201169143:web:35803b69eb0d18a7a17ff2",
-        measurementId: "G-Q67R68ZWZ3"
-    };
+// ====== Firebase Config ======
+const firebaseConfig = {
+  apiKey: "AIzaSyBlpcrpLA14LKvQy_G5GELJNIeG9Sn_yIk",
+  authDomain: "loan-tracker-app-d7e0c.firebaseapp.com",
+  projectId: "loan-tracker-app-d7e0c",
+  storageBucket: "loan-tracker-app-d7e0c.firebasestorage.app",
+  messagingSenderId: "958201169143",
+  appId: "1:958201169143:web:35803b69eb0d18a7a17ff2",
+  measurementId: "G-Q67R68ZWZ3"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+// ====== Initialize Firebase ======
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    const authContainer = document.getElementById('auth-container');
-    const appContainer = document.getElementById('app');
-    const loginButton = document.getElementById('login-button');
-    const signupButton = document.getElementById('signup-button');
-    const signoutButton = document.getElementById('signout-button');
-    const authEmail = document.getElementById('auth-email');
-    const authPassword = document.getElementById('auth-password');
-    const authError = document.getElementById('auth-error-message');
-    const userIdEl = document.getElementById('user-id');
-    const authStatusEl = document.getElementById('auth-status');
-    const formEl = document.getElementById('add-loan-form');
-    const nameInput = document.getElementById('borrower-name');
-    const amountInput = document.getElementById('loan-amount');
-    const loansList = document.getElementById('loans-list');
-    const totalLoanedEl = document.getElementById('total-loaned');
-    const totalAllTimeEl = document.getElementById('total-all-time');
-    const totalPaidEl = document.getElementById('total-paid');
-    const resetPaidBtn = document.getElementById('reset-paid-btn');
-    const loadingIndicator = document.getElementById('loading-indicator');
+// ====== DOM Elements ======
+const authContainerEl = document.getElementById('auth-container');
+const loginButton = document.getElementById('login-button');
+const signupButton = document.getElementById('signup-button');
+const signoutButton = document.getElementById('signout-button');
+const authEmailInput = document.getElementById('auth-email');
+const authPasswordInput = document.getElementById('auth-password');
+const authErrorEl = document.getElementById('auth-error-message');
 
-    let loans = [];
+const mainAppEl = document.getElementById('app');
+const userIdEl = document.getElementById('user-id');
+const authStatusEl = document.getElementById('auth-status');
 
-    // AUTH LISTENER
-    onAuthStateChanged(auth, user => {
-        if(user){
-            authContainer.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-            userIdEl.textContent = user.uid;
-            authStatusEl.textContent = 'Authenticated';
-            fetchLoans();
-        } else {
-            authContainer.classList.remove('hidden');
-            appContainer.classList.add('hidden');
-            userIdEl.textContent = 'N/A';
-            authStatusEl.textContent = 'Signed Out';
-        }
-    });
+const formEl = document.getElementById('add-loan-form');
+const nameInput = document.getElementById('borrower-name');
+const amountInput = document.getElementById('loan-amount');
+const loansListEl = document.getElementById('loans-list');
+const noRecordsMessage = document.getElementById('no-records-message');
+const totalLoanedEl = document.getElementById('total-loaned');
+const totalAllTimeEl = document.getElementById('total-all-time');
+const totalPaidEl = document.getElementById('total-paid');
 
-    // SIGNUP
-    signupButton.addEventListener('click', async () => {
-        try{
-            const userCredential = await createUserWithEmailAndPassword(auth, authEmail.value, authPassword.value);
-            authError.classList.add('hidden');
-        } catch(e){
-            authError.textContent = e.message;
-            authError.classList.remove('hidden');
-        }
-    });
+let userId = null;
 
-    // LOGIN
-    loginButton.addEventListener('click', async () => {
-        try{
-            const userCredential = await signInWithEmailAndPassword(auth, authEmail.value, authPassword.value);
-            authError.classList.add('hidden');
-        } catch(e){
-            authError.textContent = e.message;
-            authError.classList.remove('hidden');
-        }
-    });
+// ====== Helper Functions ======
+const formatCurrency = amount => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2}).format(amount);
+const showAuthError = msg => { authErrorEl.textContent = msg; authErrorEl.classList.remove('hidden'); };
+const hideAuthError = () => { authErrorEl.textContent=''; authErrorEl.classList.add('hidden'); };
 
-    // SIGNOUT
-    signoutButton.addEventListener('click', async () => {
-        await signOut(auth);
-    });
+// ====== Auth Functions ======
+const handleSignUp = async () => {
+  hideAuthError();
+  try {
+    await createUserWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
+  } catch(e) { showAuthError(e.message); console.error(e);}
+};
 
-    // ADD LOAN
-    formEl.addEventListener('submit', async e => {
-        e.preventDefault();
-        const user = auth.currentUser;
-        if(!user) return;
-        const name = nameInput.value.trim();
-        const amount = parseFloat(amountInput.value);
-        if(!name || !amount) return;
+const handleSignIn = async () => {
+  hideAuthError();
+  try {
+    await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
+  } catch(e) { showAuthError(e.message); console.error(e);}
+};
 
-        await addDoc(collection(db, 'loans'), {
-            borrower: name,
-            amount,
-            paid: false,
-            userId: user.uid,
-            timestamp: serverTimestamp()
-        });
+const handleSignOut = async () => { try { await signOut(auth); } catch(e){console.error(e);} };
 
-        nameInput.value = '';
-        amountInput.value = '';
-    });
+// ====== Firestore Reference ======
+const getLoansCollectionRef = () => collection(db, `users/${userId}/loan_records`);
 
-    // FETCH LOANS
-    async function fetchLoans(){
-        const user = auth.currentUser;
-        if(!user) return;
-        const q = query(collection(db, 'loans'));
-        onSnapshot(q, snapshot => {
-            loans = [];
-            snapshot.forEach(doc => loans.push({id: doc.id, ...doc.data()}));
-            renderLoans();
-            updateSummary();
-        });
-    }
+// ====== Add Loan ======
+const addLoan = async e => {
+  e.preventDefault();
+  const name = nameInput.value.trim();
+  const amount = parseFloat(amountInput.value);
+  if(!name || isNaN(amount) || amount <= 0) return alert('Enter valid data');
+  try {
+    await addDoc(getLoansCollectionRef(), {name, amount, paidAmount:0, isPaid:false, createdAt:serverTimestamp()});
+    nameInput.value=''; amountInput.value='';
+  } catch(e){console.error(e);}
+};
 
-    // RENDER LOANS
-    function renderLoans(){
-        loansList.innerHTML = '';
-        if(loans.length === 0){
-            loansList.innerHTML = '<p class="text-center text-gray-500 py-4">No loans recorded yet.</p>';
-            return;
-        }
+// ====== Partial Payment ======
+const makePartialPayment = async (loanId, remainingAmount, currentPaid) => {
+  const input = prompt(`Enter partial payment amount (Remaining: ₹${remainingAmount.toFixed(2)}):`);
+  const payment = parseFloat(input);
+  if(!payment || payment <=0 || payment > remainingAmount){ alert('Invalid payment'); return;}
+  const loanRef = doc(db, `users/${userId}/loan_records/${loanId}`);
+  const newPaidAmount = currentPaid + payment;
+  await updateDoc(loanRef, { paidAmount:newPaidAmount, isPaid:newPaidAmount>=remainingAmount+currentPaid });
+};
 
-        loans.forEach(loan => {
-            const loanEl = document.createElement('div');
-            loanEl.classList.add('flex','justify-between','items-center','py-2','px-3');
-            loanEl.innerHTML = `
-                <div>
-                    <p class="font-semibold">${loan.borrower}</p>
-                    <p class="text-sm text-gray-500">₹${loan.amount.toFixed(2)} ${loan.paid ? '(Paid)' : ''}</p>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button class="bg-green-500 text-white px-2 py-1 rounded text-xs" data-id="${loan.id}" data-action="toggle">
-                        ${loan.paid ? 'Undo Paid' : 'Mark Paid'}
-                    </button>
-                    <button class="bg-red-500 text-white px-2 py-1 rounded text-xs" data-id="${loan.id}" data-action="delete">
-                        Delete
-                    </button>
-                </div>
-            `;
-            loansList.appendChild(loanEl);
-        });
+// ====== Delete Loan ======
+const deleteLoan = async (loanId) => {
+  if(confirm("Delete this loan?")) await deleteDoc(doc(db, `users/${userId}/loan_records/${loanId}`));
+};
 
-        // ADD LISTENERS
-        loansList.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const id = btn.dataset.id;
-                const action = btn.dataset.action;
-                const loanRef = doc(db, 'loans', id);
+// ====== Render Loans ======
+const renderLoans = loans => {
+  loansListEl.innerHTML='';
+  if(loans.length===0){ noRecordsMessage.classList.remove('hidden'); return; }
+  else noRecordsMessage.classList.add('hidden');
 
-                if(action === 'toggle'){
-                    const loanData = loans.find(l => l.id === id);
-                    await updateDoc(loanRef, { paid: !loanData.paid });
-                }
-                if(action === 'delete'){
-                    await deleteDoc(loanRef);
-                }
-            });
-        });
-    }
+  let totalLoaned=0, totalRemaining=0, totalPaid=0;
 
-    // UPDATE SUMMARY
-    function updateSummary(){
-        const user = auth.currentUser;
-        if(!user) return;
-        const userLoans = loans.filter(l => l.userId === user.uid);
-        const totalLoaned = userLoans.filter(l => !l.paid).reduce((a,b)=>a+b.amount,0);
-        const totalPaid = userLoans.filter(l => l.paid).reduce((a,b)=>a+b.amount,0);
-        const totalAllTime = userLoans.reduce((a,b)=>a+b.amount,0);
+  loans.forEach(loan=>{
+    const paid = loan.paidAmount || 0;
+    const remaining = loan.amount - paid;
+    totalLoaned += loan.amount;
+    totalPaid += paid;
+    totalRemaining += remaining;
 
-        totalLoanedEl.textContent = `₹${totalLoaned.toFixed(2)}`;
-        totalPaidEl.textContent = `₹${totalPaid.toFixed(2)}`;
-        totalAllTimeEl.textContent = `₹${totalAllTime.toFixed(2)}`;
+    const loanItem = document.createElement('div');
+    loanItem.className='grid grid-cols-1 sm:grid-cols-5 gap-2 p-3 border-b';
+    loanItem.innerHTML = `
+      <div>${loan.name}</div>
+      <div>₹${loan.amount.toFixed(2)}</div>
+      <div>Paid: ₹${paid.toFixed(2)}</div>
+      <div>Remaining: ₹${remaining.toFixed(2)}</div>
+      <div class="flex gap-2">
+        <button class="bg-green-500 text-white px-2 rounded partial-pay">Pay</button>
+        <button class="bg-red-500 text-white px-2 rounded delete-loan">Delete</button>
+      </div>
+    `;
 
-        resetPaidBtn.disabled = totalPaid === 0;
-    }
+    loanItem.querySelector('.partial-pay').addEventListener('click', ()=> makePartialPayment(loan.id, remaining, paid));
+    loanItem.querySelector('.delete-loan').addEventListener('click', ()=> deleteLoan(loan.id));
+    loansListEl.appendChild(loanItem);
+  });
 
-    // RESET PAID LOANS
-    resetPaidBtn.addEventListener('click', async () => {
-        const user = auth.currentUser;
-        if(!user) return;
-        const paidLoans = loans.filter(l => l.userId === user.uid && l.paid);
-        for(const loan of paidLoans){
-            const loanRef = doc(db, 'loans', loan.id);
-            await updateDoc(loanRef, { paid: false });
-        }
-    });
-</script>
-</body>
-</html>
+  totalLoanedEl.textContent = formatCurrency(totalRemaining);
+  totalAllTimeEl.textContent = formatCurrency(totalLoaned);
+  totalPaidEl.textContent = formatCurrency(totalPaid);
+};
+
+// ====== Real-time Listener ======
+onAuthStateChanged(auth, user=>{
+  if(user){
+    userId = user.uid;
+    authContainerEl.classList.add('hidden');
+    mainAppEl.classList.remove('hidden');
+    userIdEl.textContent = userId;
+    authStatusEl.text
