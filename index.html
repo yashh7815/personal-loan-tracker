@@ -31,7 +31,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
 #auth-container h2 { text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
 #auth-form input { background: rgba(255,255,255,0.9); color:#000; }
 #auth-form button { font-weight: 600; }
-
 </style>
 </head>
 <body class="min-h-screen p-4 sm:p-8">
@@ -97,13 +96,12 @@ body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
 <div id="loans-list" class="divide-y divide-gray-100 scrollable-list"></div>
 <p id="no-records-message" class="hidden text-center text-gray-500 py-4">No loans recorded yet.</p>
 </div>
-</div>
 
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, doc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ====== Firebase Config ======
 const firebaseConfig = {
@@ -121,6 +119,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ====== Enable Offline Persistence ======
+enableIndexedDbPersistence(db).catch(err => {
+  if (err.code === 'failed-precondition') console.warn('Persistence failed: Multiple tabs open');
+  if (err.code === 'unimplemented') console.warn('Persistence not available');
+});
+
 // ====== DOM Elements ======
 const authContainerEl = document.getElementById('auth-container');
 const loginButton = document.getElementById('login-button');
@@ -132,7 +136,6 @@ const authErrorEl = document.getElementById('auth-error-message');
 
 const mainAppEl = document.getElementById('app');
 const userIdEl = document.getElementById('user-id');
-const authStatusEl = document.getElementById('auth-status');
 
 const formEl = document.getElementById('add-loan-form');
 const nameInput = document.getElementById('borrower-name');
@@ -149,63 +152,47 @@ let userId = null;
 const formatCurrency = amount => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2}).format(amount);
 const showAuthError = msg => { authErrorEl.textContent = msg; authErrorEl.classList.remove('hidden'); };
 const hideAuthError = () => { authErrorEl.textContent=''; authErrorEl.classList.add('hidden'); };
+const getLoansCollectionRef = () => collection(db, `users/${userId}/loan_records`);
 
 // ====== Auth Functions ======
 const handleSignUp = async () => {
   hideAuthError();
-  try {
-    await createUserWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
-  } catch(e) { showAuthError(e.message); console.error(e);}
+  try { await createUserWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value); }
+  catch(e){ showAuthError(e.message); console.error(e); }
 };
-
 const handleSignIn = async () => {
   hideAuthError();
-  try {
-    await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
-  } catch(e) { showAuthError(e.message); console.error(e);}
+  try { await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value); }
+  catch(e){ showAuthError(e.message); console.error(e); }
 };
-
-const handleSignOut = async () => { try { await signOut(auth); } catch(e){console.error(e);} };
-
-// ====== Firestore Reference ======
-const getLoansCollectionRef = () => collection(db, `users/${userId}/loan_records`);
+const handleSignOut = async () => { try { await signOut(auth); } catch(e){ console.error(e);} };
 
 // ====== Add Loan ======
-const addLoan = async e => {
+const addLoan = async (e) => {
   e.preventDefault();
+  if(!userId){ alert('User not authenticated'); return; }
   const name = nameInput.value.trim();
   const amount = parseFloat(amountInput.value);
-  if(!name || isNaN(amount) || amount <= 0) return alert('Enter valid data');
-  try {
-    await addDoc(getLoansCollectionRef(), {name, amount, paidAmount:0, isPaid:false, createdAt:serverTimestamp()});
-    formEl.reset(); // ✅ Clear form after adding
-  } catch(e){console.error(e);}
-};
-
-// ====== Partial Payment ======
-const makePartialPayment = async (loanId, remainingAmount, currentPaid) => {
-  const input = prompt(`Enter partial payment amount (Remaining: ₹${remainingAmount.toFixed(2)}):`);
-  const payment = parseFloat(input);
-  if(!payment || payment <=0 || payment > remainingAmount){ alert('Invalid payment'); return;}
-  const loanRef = doc(db, `users/${userId}/loan_records/${loanId}`);
-  const newPaidAmount = currentPaid + payment;
-  await updateDoc(loanRef, { paidAmount:newPaidAmount, isPaid:newPaidAmount>=remainingAmount+currentPaid });
+  if(!name || isNaN(amount) || amount <= 0){ alert('Enter valid data'); return; }
+  try{
+    const docRef = await addDoc(getLoansCollectionRef(), {name, amount, paidAmount:0, isPaid:false, createdAt:serverTimestamp()});
+    console.log('Loan added with ID:', docRef.id);
+    formEl.reset();
+  } catch(e){ console.error('Error adding loan:', e); alert('Failed to add loan'); }
 };
 
 // ====== Delete Loan ======
-const deleteLoan = async (loanId) => {
-  if(confirm("Delete this loan?")) await deleteDoc(doc(db, `users/${userId}/loan_records/${loanId}`));
-};
+const deleteLoan = async (loanId) => { if(confirm("Delete this loan?")) await deleteDoc(doc(db, `users/${userId}/loan_records/${loanId}`)); };
 
-// ====== Render Loans ======
+// ====== Render Loans (with inline payment) ======
 const renderLoans = loans => {
-  loansListEl.innerHTML='';
-  if(loans.length===0){ noRecordsMessage.classList.remove('hidden'); return; }
+  loansListEl.innerHTML = '';
+  if (loans.length === 0){ noRecordsMessage.classList.remove('hidden'); return; }
   else noRecordsMessage.classList.add('hidden');
 
   let totalLoaned=0, totalRemaining=0, totalPaid=0;
 
-  loans.forEach(loan=>{
+  loans.forEach(loan => {
     const paid = loan.paidAmount || 0;
     const remaining = loan.amount - paid;
     totalLoaned += loan.amount;
@@ -213,20 +200,46 @@ const renderLoans = loans => {
     totalRemaining += remaining;
 
     const loanItem = document.createElement('div');
-    loanItem.className='grid grid-cols-1 sm:grid-cols-5 gap-2 p-3 border-b';
+    loanItem.className = 'grid grid-cols-1 sm:grid-cols-5 gap-2 p-3 border-b items-center';
     loanItem.innerHTML = `
       <div>${loan.name}</div>
       <div>₹${loan.amount.toFixed(2)}</div>
       <div>Paid: ₹${paid.toFixed(2)}</div>
       <div>Remaining: ₹${remaining.toFixed(2)}</div>
-      <div class="flex gap-2">
-        <button class="bg-green-500 text-white px-2 rounded partial-pay">Pay</button>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <div class="inline-payment hidden flex gap-2">
+          <input type="number" min="0.01" max="${remaining}" step="0.01" placeholder="₹ amount" class="partial-input border rounded px-2 py-1 w-24"/>
+          <button class="bg-green-600 text-white px-2 rounded pay-submit">Submit</button>
+          <button class="bg-gray-400 text-white px-2 rounded pay-cancel">Cancel</button>
+        </div>
+        <button class="bg-green-500 text-white px-2 rounded pay-btn">Pay</button>
         <button class="bg-red-500 text-white px-2 rounded delete-loan">Delete</button>
       </div>
     `;
 
-    loanItem.querySelector('.partial-pay').addEventListener('click', ()=> makePartialPayment(loan.id, remaining, paid));
+    const payBtn = loanItem.querySelector('.pay-btn');
+    const payCancel = loanItem.querySelector('.pay-cancel');
+    const paySubmit = loanItem.querySelector('.pay-submit');
+    const payInput = loanItem.querySelector('.partial-input');
+    const inlinePayment = loanItem.querySelector('.inline-payment');
+
+    payBtn.addEventListener('click', () => {
+      inlinePayment.classList.remove('hidden'); payBtn.classList.add('hidden'); payInput.focus();
+    });
+    payCancel.addEventListener('click', () => {
+      inlinePayment.classList.add('hidden'); payBtn.classList.remove('hidden'); payInput.value='';
+    });
+    paySubmit.addEventListener('click', async () => {
+      const payment = parseFloat(payInput.value);
+      if(!payment || payment <=0 || payment>remaining){ alert('Invalid payment'); return; }
+      const loanRef = doc(db, `users/${userId}/loan_records/${loan.id}`);
+      const newPaidAmount = paid + payment;
+      await updateDoc(loanRef, { paidAmount:newPaidAmount, isPaid:newPaidAmount>=loan.amount });
+      payInput.value=''; inlinePayment.classList.add('hidden'); payBtn.classList.remove('hidden');
+    });
+
     loanItem.querySelector('.delete-loan').addEventListener('click', ()=> deleteLoan(loan.id));
+
     loansListEl.appendChild(loanItem);
   });
 
@@ -239,8 +252,7 @@ const renderLoans = loans => {
 onAuthStateChanged(auth, user=>{
   if(user){
     userId = user.uid;
-    authContainerEl.classList.add('hidden');
-    mainAppEl.classList.remove('hidden');
+    authContainerEl.classList.add('hidden'); mainAppEl.classList.remove('hidden');
     userIdEl.textContent = userId;
 
     // Real-time listener for loans
@@ -250,9 +262,7 @@ onAuthStateChanged(auth, user=>{
       renderLoans(loans);
     });
   } else {
-    userId = null;
-    authContainerEl.classList.remove('hidden');
-    mainAppEl.classList.add('hidden');
+    userId=null; authContainerEl.classList.remove('hidden'); mainAppEl.classList.add('hidden');
   }
 });
 
