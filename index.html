@@ -160,9 +160,12 @@ const addLoan = async e => {
   if(!name || isNaN(amount) || amount <= 0) return alert('Enter valid data');
   try {
     await addDoc(getLoansCollectionRef(), {name, amount, paidAmount:0, isPaid:false, createdAt:serverTimestamp()});
-    nameInput.value=''; amountInput.value='';
+    
+    // Reset the form properly
+    formEl.reset(); 
   } catch(e){console.error(e);}
 };
+
 
 // ====== Partial Payment ======
 const makePartialPayment = async (loanId, remainingAmount, currentPaid) => {
@@ -225,3 +228,4 @@ onAuthStateChanged(auth, user=>{
     mainAppEl.classList.remove('hidden');
     userIdEl.textContent = userId;
     authStatusEl.text
+
