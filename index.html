@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Loan Tracker</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=100..900&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for aesthetic enhancements */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9; /* Light background */
+        }
+        .container-card {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        .scrollable-list {
+            max-height: 450px;
+            overflow-y: auto;
+        }
+        /* Custom scrollbar for better look */
+        .scrollable-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollable-list::-webkit-scrollbar-thumb {
+            background-color: #a0aec0;
+            border-radius: 3px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <!-- Set Firebase log level to Debug for better diagnostics -->
+    <script>
+        const setLogLevel = (level) => {
+            console.log(`Setting Firebase log level to ${level}`);
+        };
+        setLogLevel('Debug');
+    </script>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+    <!-- Authentication Container (Shown before login) -->
+    <div id="auth-container" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow-2xl hidden">
+        <h2 class="text-3xl font-extrabold text-gray-800 mb-6 text-center">Welcome Back!</h2>
+        <div id="auth-error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert"></div>
+
+        <form id="auth-form" class="space-y-4">
+            <div>
+                <label for="auth-email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input type="email" id="auth-email" required placeholder="you@example.com"
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+            </div>
+            <div>
+                <label for="auth-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="auth-password" required placeholder="Min 6 characters"
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+            </div>
+
+            <div class="flex space-x-4 pt-2">
+                <button type="button" id="login-button" 
+                        class="w-full bg-teal-600 text-white p-3 rounded-lg font-semibold hover:bg-teal-700 transition duration-150 disabled:bg-gray-400">
+                    Log In
+                </button>
+                <button type="button" id="signup-button"
+                        class="w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-150 disabled:bg-gray-400">
+                    Sign Up
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Main Application Container (Hidden before login) -->
+    <div id="app" class="max-w-4xl mx-auto hidden">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-4xl font-extrabold text-gray-800 flex items-center">
+                <svg class="w-8 h-8 text-teal-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                Personal Loan Manager
+            </h1>
+            <button id="signout-button" class="bg-red-500 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                Sign Out
+            </button>
+        </header>
+
+        <!-- User ID and Status -->
+        <div class="mb-6 p-4 bg-white rounded-xl shadow-lg flex justify-between items-center">
+            <p class="text-sm font-medium text-gray-600">
+                Status: <span id="auth-status" class="font-bold text-green-600">Authenticated</span> | User ID:
+                <span id="user-id" class="text-xs text-gray-500 break-all bg-gray-100 p-1 rounded">Loading...</span>
+            </p>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div id="summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <!-- Current Active Loans (Unpaid) -->
+            <div class="p-5 bg-white rounded-xl container-card border-l-4 border-teal-500">
+                <p class="text-sm font-medium text-gray-500">Current Active Loans (Unpaid)</p>
+                <p id="total-loaned" class="mt-1 text-3xl font-semibold text-gray-900">--</p>
+            </div>
+            <!-- Total Money Loaned (All Time) -->
+            <div class="p-5 bg-white rounded-xl container-card border-l-4 border-amber-500">
+                <p class="text-sm font-medium text-gray-500">Total Money Loaned (All Time)</p>
+                <p id="total-all-time" class="mt-1 text-3xl font-semibold text-gray-900">--</p>
+            </div>
+            <!-- Total Paid Back (with Reset Button) -->
+            <div class="p-5 bg-white rounded-xl container-card border-l-4 border-green-500">
+                <p class="text-sm font-medium text-gray-500 flex justify-between items-center">
+                    Total Paid Back
+                    <button id="reset-paid-btn" disabled class="text-xs bg-red-100 text-red-600 font-semibold px-2 py-0.5 rounded hover:bg-red-200 transition disabled:opacity-50">
+                        Reset Paid
+                    </button>
+                </p>
+                <p id="total-paid" class="mt-1 text-3xl font-semibold text-gray-900">--</p>
+            </div>
+        </div>
+
+        <!-- Add New Loan Form -->
+        <div class="bg-white p-6 rounded-xl container-card mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Record New Loan</h2>
+            <form id="add-loan-form" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                <!-- Borrower Name -->
+                <div class="sm:col-span-2">
+                    <label for="borrower-name" class="block text-sm font-medium text-gray-700 mb-1">Borrower Name</label>
+                    <input type="text" id="borrower-name" required placeholder="e.g., Jane Doe"
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+                </div>
+                <!-- Amount -->
+                <div>
+                    <label for="loan-amount" class="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
+                    <input type="number" id="loan-amount" required min="0.01" step="0.01" placeholder="e.g., 5000"
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+                </div>
+                <!-- Submit Button -->
+                <button type="submit" id="submit-button" disabled
+                        class="w-full sm:col-span-1 bg-teal-600 text-white p-2 rounded-lg font-semibold hover:bg-teal-700 transition duration-150 disabled:bg-gray-400">
+                    <span id="button-text">Add Loan</span>
+                    <span id="button-spinner" class="hidden spinner mx-auto"></span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Loan Records List -->
+        <div class="bg-white p-6 rounded-xl container-card">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Loan Records</h2>
+
+            <!-- Table Header -->
+            <div class="hidden sm:grid grid-cols-12 gap-4 py-2 px-4 font-semibold text-sm text-gray-600 border-b border-gray-200">
+                <div class="col-span-4">Borrower</div>
+                <div class="col-span-3 text-right">Amount</div>
+                <div class="col-span-3">Loan Date</div>
+                <div class="col-span-2 text-center">Status</div>
+            </div>
+
+            <!-- Loan List Body -->
+            <div id="loans-list" class="divide-y divide-gray-100 scrollable-list">
+                <div id="loading-indicator" class="flex justify-center items-center p-8">
+                    <div class="spinner"></div>
+                    <p class="ml-3 text-gray-500">Loading loan records...</p>
+                </div>
+                <!-- Loan items will be rendered here by JavaScript -->
+            </div>
+
+            <p id="no-records-message" class="hidden text-center text-gray-500 py-4">
+                No loans recorded yet. Use the form above to start tracking!
+            </p>
+        </div>
+
+        <!-- Toast Notification Area -->
+        <div id="toast-container" class="fixed bottom-4 right-4 space-y-2">
+            <!-- Toasts will be appended here -->
+        </div>
+
+    </div>
+
+    <!-- Custom Confirmation Modal for Reset Paid Records (replaces confirm()) -->
+    <div id="reset-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden flex items-center justify-center z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-96 max-w-full transform transition-all duration-300 scale-95 opacity-0">
+            <h3 class="text-xl font-bold text-red-600 mb-4">Confirm Deletion</h3>
+            <p class="text-gray-700 mb-6">
+                <span class="font-bold">WARNING:</span> Are you sure you want to <span class="text-red-600 font-semibold">PERMANENTLY delete ALL records</span> marked as PAID? This action cannot be undone.
+            </p>
+            <div class="flex justify-end space-x-3">
+                <button id="modal-cancel-delete" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
+                    Cancel
+                </button>
+                <button id="modal-confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition">
+                    Yes, Delete Paid Records
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // Import signInAnonymously for mock configuration fallback
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection, query, serverTimestamp, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Global Firebase Variables (Mandatory Canvas Globals) ---
+
+        // 1. MOCK CONFIGURATION FALLBACK (Allows the app to run outside the canvas environment)
+        // **REPLACE THIS with your ACTUAL Firebase Config if running outside of a specialized environment.**
+        const MOCK_FIREBASE_CONFIG = {
+            apiKey: "AIzaSy_MOCK_API_KEY_1234567890",
+            authDomain: "mock-project-id.firebaseapp.com",
+            projectId: "mock-project-id",
+            storageBucket: "mock-project-id.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:a1b2c3d4e5f6g7h8i9j0",
+            measurementId: "G-MOCK-ID"
+        };
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-loan-app-id';
+        
+        let firebaseConfig;
+        const isMockMode = typeof __firebase_config === 'undefined' || !__firebase_config;
+
+        if (!isMockMode) {
+            // Use environment-provided config if available
+            firebaseConfig = JSON.parse(__firebase_config);
+        } else {
+            // Use mock config if environment variable is missing (for local running)
+            console.warn("Using MOCK Firebase Configuration. Data will not persist to a real backend unless updated.");
+            firebaseConfig = MOCK_FIREBASE_CONFIG;
+        }
+
+        let app, db, auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        // --- DOM Elements ---
+        const mainAppEl = document.getElementById('app');
+        const authContainerEl = document.getElementById('auth-container');
+        const authErrorEl = document.getElementById('auth-error-message');
+        const loginButton = document.getElementById('login-button');
+        const signupButton = document.getElementById('signup-button');
+        const signoutButton = document.getElementById('signout-button');
+        const authEmailInput = document.getElementById('auth-email');
+        const authPasswordInput = document.getElementById('auth-password');
+
+        // Main App UI elements
+        const authStatusEl = document.getElementById('auth-status');
+        const userIdEl = document.getElementById('user-id');
+        const loansListEl = document.getElementById('loans-list');
+        const formEl = document.getElementById('add-loan-form');
+        const nameInput = document.getElementById('borrower-name');
+        const amountInput = document.getElementById('loan-amount');
+        const submitButton = document.getElementById('submit-button');
+        const buttonText = document.getElementById('button-text');
+        const buttonSpinner = document.getElementById('button-spinner');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const noRecordsMessage = document.getElementById('no-records-message');
+        const totalLoanedEl = document.getElementById('total-loaned'); // Current Active Loans (Unpaid)
+        const totalAllTimeEl = document.getElementById('total-all-time'); // Total Money Loaned (All Time)
+        const totalPaidEl = document.getElementById('total-paid');
+        const resetPaidBtn = document.getElementById('reset-paid-btn'); 
+
+        // Modal Elements (Replacing confirm())
+        const resetModalEl = document.getElementById('reset-modal');
+        const modalConfirmBtn = document.getElementById('modal-confirm-delete');
+        const modalCancelBtn = document.getElementById('modal-cancel-delete');
+        let deleteCallback = null; // Stores the function to run on modal confirmation
+
+        // --- Utility Functions ---
+
+        /**
+         * Formats a number into INR currency string.
+         * @param {number} amount
+         * @returns {string}
+         */
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(amount);
+        };
+
+        /**
+         * Shows a transient toast notification.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success', 'error', or 'info'.
+         */
+        const showToast = (message, type = 'info') => {
+            const toastContainer = document.getElementById('toast-container');
+            const colorMap = {
+                success: { bg: 'bg-green-500', icon: 'M5 13l4 4L19 7' },
+                error: { bg: 'bg-red-500', icon: 'M6 18L18 6M6 6l12 12' },
+                info: { bg: 'bg-blue-500', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
+            };
+
+            const colors = colorMap[type] || colorMap.info;
+
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-lg shadow-xl text-white ${colors.bg} flex items-center transition-all duration-300 transform translate-y-full opacity-0`;
+            toast.innerHTML = `
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${colors.icon}"></path>
+                </svg>
+                <span>${message}</span>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-full', 'opacity-0');
+            }, 10);
+
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        };
+        
+        /**
+         * Shows a persistent error message in the auth container.
+         * @param {string} message 
+         */
+        const showAuthError = (message) => {
+            authErrorEl.textContent = message;
+            authErrorEl.classList.remove('hidden');
+        };
+
+        /**
+         * Hides the auth error message.
+         */
+        const hideAuthError = () => {
+            authErrorEl.textContent = '';
+            authErrorEl.classList.add('hidden');
+        };
+
+        /**
+         * Attempts to sign in anonymously when using mock configuration.
+         */
+        const handleMockSignIn = async () => {
+            try {
+                // Attempt anonymous sign-in, which allows onAuthStateChanged to pick up a user
+                // and proceed to test Firestore functionality.
+                await signInAnonymously(auth);
+                showToast('Auto-signed in anonymously (Mock Mode)', 'info');
+            } catch (error) {
+                console.error("Mock Anonymous Sign In Error:", error);
+                showAuthError("Failed to auto-sign in anonymously. Firestore functionality cannot be tested. Ensure your project allows anonymous sign-in.");
+            }
+        }
+
+
+        // --- Firebase Initialization and Auth ---
+
+        /**
+         * Initializes Firebase and sets up the auth listener.
+         */
+        async function setupFirebaseAndAuth() {
+            // Check for mock mode detection based on the defined const isMockMode
+            if (isMockMode) {
+                authContainerEl.classList.remove('hidden');
+                
+                // --- FIX: Disable manual authentication in mock mode ---
+                const authFormEl = document.getElementById('auth-form');
+                // Visually disable the form elements
+                authFormEl.classList.add('pointer-events-none', 'opacity-50');
+                authEmailInput.disabled = true;
+                authPasswordInput.disabled = true;
+                loginButton.disabled = true;
+                signupButton.disabled = true;
+
+                // Show instruction/warning
+                showAuthError('⚠️ WARNING: Mock Configuration Detected. Sign Up/Log In is DISABLED. The app is attempting to auto-sign in anonymously to test functionality.');
+            
+            } else if (!firebaseConfig || !firebaseConfig.apiKey) {
+                authContainerEl.classList.remove('hidden');
+                return showAuthError('ERROR: Firebase configuration is missing key parameters.');
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                authContainerEl.classList.remove('hidden');
+                return showAuthError('Failed to initialize Firebase services. Check console for details.');
+            }
+
+            // Set up Auth State Listener
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // User is signed in. Show main app.
+                    userId = user.uid;
+                    isAuthReady = true;
+                    userIdEl.textContent = userId;
+                    authStatusEl.textContent = isMockMode ? 'Mock User (Anonymous)' : 'Authenticated';
+                    mainAppEl.classList.remove('hidden');
+                    authContainerEl.classList.add('hidden');
+                    submitButton.disabled = false;
+                    resetPaidBtn.disabled = false;
+                    listenForLoans();
+                } else {
+                    // User is signed out. Show auth screen.
+                    userId = null;
+                    isAuthReady = false;
+                    userIdEl.textContent = 'N/A (Signed Out)';
+                    authStatusEl.textContent = 'Signed Out';
+                    mainAppEl.classList.add('hidden');
+                    // Only show auth container if not in mock mode, otherwise the user is waiting for auto sign-in
+                    if (!isMockMode) {
+                        authContainerEl.classList.remove('hidden');
+                    }
+                    // Clear app content
+                    loansListEl.innerHTML = '<p class="text-center text-gray-500 py-8">Please log in to view your records.</p>';
+                    totalLoanedEl.textContent = totalAllTimeEl.textContent = totalPaidEl.textContent = '--';
+                }
+            });
+
+            // If in mock mode, immediately attempt anonymous sign-in after initialization
+            if (isMockMode) {
+                await handleMockSignIn();
+            }
+        }
+
+        /**
+         * Handles user registration (Sign Up).
+         */
+        const handleSignUp = async () => {
+            const email = authEmailInput.value;
+            const password = authPasswordInput.value;
+            hideAuthError();
+            loginButton.disabled = signupButton.disabled = true;
+
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                showToast('Registration successful! You are now logged in.', 'success');
+            } catch (error) {
+                let message = 'Registration failed. Please check your email and password.';
+                if (error.code === 'auth/weak-password') {
+                    message = 'Password must be at least 6 characters.';
+                } else if (error.code === 'auth/email-already-in-use') {
+                    message = 'This email is already registered. Try logging in.';
+                } else if (error.code === 'auth/invalid-email') {
+                    message = 'The email address is not valid.';
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    // Provide the explicit error message if a proper config is used but feature is disabled
+                    message = 'Error: Email/Password login is not enabled for this project. This is often the case when a Firebase project is not fully configured for this method.';
+                }
+                showAuthError(message);
+                console.error("Sign Up Error:", error.code, error.message);
+            } finally {
+                loginButton.disabled = signupButton.disabled = false;
+            }
+        };
+
+        /**
+         * Handles user login (Sign In).
+         */
+        const handleSignIn = async () => {
+            const email = authEmailInput.value;
+            const password = authPasswordInput.value;
+            hideAuthError();
+            loginButton.disabled = signupButton.disabled = true;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                showToast('Login successful!', 'success');
+            } catch (error) {
+                let message = 'Login failed. Invalid email or password.';
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    message = 'Invalid email or password.';
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    message = 'Error: Email/Password login is not enabled for this project.';
+                }
+                showAuthError(message);
+                console.error("Sign In Error:", error.code, error.message);
+            } finally {
+                loginButton.disabled = signupButton.disabled = false;
+            }
+        };
+
+        /**
+         * Handles user sign out.
+         */
+        const handleSignOut = async () => {
+            try {
+                await signOut(auth);
+                showToast('You have been signed out.', 'info');
+            } catch (error) {
+                console.error("Sign Out Error:", error);
+                showToast('Failed to sign out.', 'error');
+            }
+        };
+
+        // --- Firestore Operations ---
+
+        /**
+         * Creates a reference to the user's private loan records collection.
+         * @returns {import("firebase/firestore").CollectionReference}
+         */
+        const getLoansCollectionRef = () => {
+            if (!userId) {
+                throw new Error("User not authenticated for Firestore access.");
+            }
+            // Private data path: /artifacts/{appId}/users/{userId}/loan_records
+            const userPath = `/artifacts/${appId}/users/${userId}`;
+            return collection(db, userPath, 'loan_records');
+        };
+
+        /**
+         * Adds a new loan record to Firestore.
+         * @param {Event} e
+         */
+        const addLoan = async (e) => {
+            e.preventDefault();
+            if (!isAuthReady || !userId) {
+                showToast('Please log in to add records.', 'error');
+                return;
+            }
+
+            const name = nameInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+
+            if (!name || isNaN(amount) || amount <= 0) {
+                return showToast('Please enter a valid name and amount.', 'error');
+            }
+
+            // UI feedback
+            submitButton.disabled = true;
+            buttonText.textContent = 'Saving...';
+            buttonSpinner.classList.remove('hidden');
+
+            try {
+                const newLoan = {
+                    name: name,
+                    amount: amount,
+                    isPaid: false, // Default to unpaid
+                    createdAt: serverTimestamp()
+                };
+
+                await addDoc(getLoansCollectionRef(), newLoan);
+
+                // Clear form and show success
+                nameInput.value = '';
+                amountInput.value = '';
+                showToast(`Loan of ${formatCurrency(amount)} to ${name} added successfully!`, 'success');
+
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showToast(`Error: Failed to add loan. ${error.message}`, 'error');
+            } finally {
+                buttonText.textContent = 'Add Loan';
+                buttonSpinner.classList.add('hidden');
+                submitButton.disabled = false;
+            }
+        };
+
+        /**
+         * Toggles the 'isPaid' status of a loan.
+         * @param {string} docId - The Firestore document ID.
+         * @param {boolean} currentStatus - The current status.
+         */
+        const togglePaidStatus = async (docId, currentStatus) => {
+            if (!isAuthReady || !userId) return;
+
+            const docRef = doc(getLoansCollectionRef(), docId);
+            const newStatus = !currentStatus;
+
+            try {
+                await updateDoc(docRef, {
+                    isPaid: newStatus
+                });
+
+                showToast(`Loan ${newStatus ? 'marked as PAID' : 're-opened'} successfully.`, 'info');
+
+            } catch (error) {
+                console.error("Error updating document: ", error);
+                showToast('Failed to update status. Please try again.', 'error');
+            }
+        };
+
+        // --- Custom Modal Functions (Replacing native confirm) ---
+
+        /**
+         * Shows the custom deletion confirmation modal.
+         * @param {Function} callback - Function to execute on confirmation.
+         */
+        const showResetModal = (callback) => {
+            deleteCallback = callback;
+            resetModalEl.classList.remove('hidden');
+            // Trigger transition effects
+            setTimeout(() => {
+                resetModalEl.querySelector('div').classList.remove('scale-95', 'opacity-0');
+            }, 10);
+        };
+
+        /**
+         * Hides the custom deletion confirmation modal.
+         */
+        const hideResetModal = () => {
+            // Trigger transition effects
+            resetModalEl.querySelector('div').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                resetModalEl.classList.add('hidden');
+            }, 300);
+            deleteCallback = null;
+        };
+        
+        // Modal Event Listeners
+        modalCancelBtn.addEventListener('click', hideResetModal);
+        modalConfirmBtn.addEventListener('click', () => {
+            if (deleteCallback) {
+                deleteCallback();
+            }
+            hideResetModal();
+        });
+
+        // --- Reset Logic ---
+
+        /**
+         * Initiates the reset process by showing the modal.
+         */
+        const attemptResetPaidRecords = () => {
+            if (!isAuthReady || !userId) {
+                showToast('Please log in to perform this action.', 'error');
+                return;
+            }
+            if (resetPaidBtn.disabled) return;
+            
+            showResetModal(resetPaidRecords);
+        };
+
+
+        /**
+         * Resets (deletes) all loan records marked as 'Paid'.
+         */
+        const resetPaidRecords = async () => {
+            resetPaidBtn.disabled = true;
+            resetPaidBtn.textContent = 'Deleting...';
+            
+            showToast('Initiating permanent deletion of ALL paid records...', 'error');
+
+            try {
+                const loansRef = getLoansCollectionRef();
+                // Fetch all documents
+                const snapshot = await getDocs(query(loansRef)); 
+                
+                const paidDocRefs = [];
+                snapshot.forEach((docSnap) => {
+                    if (docSnap.data().isPaid === true) {
+                        paidDocRefs.push(doc(loansRef, docSnap.id));
+                    }
+                });
+
+                if (paidDocRefs.length === 0) {
+                     showToast('No paid records found to reset.', 'info');
+                     return;
+                }
+
+                // Delete documents one by one
+                let deleteCount = 0;
+                for (const docRef of paidDocRefs) {
+                    await deleteDoc(docRef);
+                    deleteCount++;
+                }
+
+                showToast(`${deleteCount} paid records successfully deleted!`, 'success');
+
+            } catch (error) {
+                console.error("Error resetting paid records: ", error);
+                showToast(`Failed to reset paid records. ${error.message}`, 'error');
+            } finally {
+                resetPaidBtn.textContent = 'Reset Paid';
+                // The button state will be re-evaluated in renderLoans from the snapshot
+            }
+        };
+
+
+        // --- UI Rendering and Real-time Listener ---
+
+        /**
+         * Renders the list of loans and calculates the summary.
+         * @param {Array<Object>} loans - Array of loan objects including id.
+         */
+        const renderLoans = (loans) => {
+            loansListEl.innerHTML = ''; // Clear existing list
+            loadingIndicator.classList.add('hidden');
+            noRecordsMessage.classList.toggle('hidden', loans.length > 0);
+
+            let totalLoaned = 0; // JS Variable: ALL-TIME LOANED
+            let totalRemaining = 0; // JS Variable: UNPAID LOANED (Active)
+            let totalPaid = 0;
+
+            // Enable or disable reset button based on if paid records exist
+            const hasPaidRecords = loans.some(loan => loan.isPaid);
+            resetPaidBtn.disabled = !hasPaidRecords;
+
+            // Sort loans: unpaid first, then by date (most recent first)
+            loans.sort((a, b) => {
+                if (a.isPaid !== b.isPaid) {
+                    return a.isPaid ? 1 : -1; // Unpaid (false) comes first
+                }
+                const dateA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
+                const dateB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
+                return dateB - dateA; // Most recent first
+            });
+
+            loans.forEach(loan => {
+                const amount = loan.amount || 0;
+                totalLoaned += amount; // All-time total
+
+                if (loan.isPaid) {
+                    totalPaid += amount;
+                } else {
+                    totalRemaining += amount; // Active loan total
+                }
+
+                // Get date string, default to 'N/A' if not available
+                const loanDate = loan.createdAt
+                    ? new Date(loan.createdAt.seconds * 1000).toLocaleDateString()
+                    : 'N/A';
+
+                // Create the list item element
+                const loanItem = document.createElement('div');
+                loanItem.className = 'loan-item grid grid-cols-12 gap-4 items-center py-3 px-4 hover:bg-gray-50 transition duration-100';
+                loanItem.innerHTML = `
+                    <!-- Borrower Name (col-span-4) -->
+                    <div class="col-span-12 sm:col-span-4 font-medium text-gray-800 break-words">
+                        ${loan.name}
+                        <div class="sm:hidden text-xs text-gray-500 mt-0.5">${loanDate}</div>
+                    </div>
+                    <!-- Amount (col-span-3) -->
+                    <div class="col-span-4 sm:col-span-3 text-right font-semibold text-teal-600">${formatCurrency(amount)}</div>
+                    <!-- Loan Date (col-span-3) - Hidden on mobile, shown in name area -->
+                    <div class="hidden sm:block col-span-3 text-sm text-gray-500">${loanDate}</div>
+                    <!-- Status/Action (col-span-2) -->
+                    <div class="col-span-8 sm:col-span-2 flex justify-end sm:justify-center">
+                        <button data-id="${loan.id}" data-paid="${loan.isPaid}"
+                            class="toggle-paid-btn text-xs font-bold py-1 px-2 rounded-full transition duration-150 whitespace-nowrap
+                                   ${loan.isPaid ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : 'bg-teal-500 text-white hover:bg-teal-600'}">
+                            ${loan.isPaid ? 'Mark Unpaid' : 'Mark Paid'}
+                        </button>
+                    </div>
+                `;
+                loansListEl.appendChild(loanItem);
+            });
+
+            // Attach event listeners for the new buttons
+            loansListEl.querySelectorAll('.toggle-paid-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const docId = e.currentTarget.getAttribute('data-id');
+                    const isPaid = e.currentTarget.getAttribute('data-paid') === 'true';
+                    togglePaidStatus(docId, isPaid);
+                });
+            });
+
+            // Update Summary
+            totalLoanedEl.textContent = formatCurrency(totalRemaining);
+            totalAllTimeEl.textContent = formatCurrency(totalLoaned);
+            totalPaidEl.textContent = formatCurrency(totalPaid);
+        };
+
+        /**
+         * Sets up the real-time listener for the loan records.
+         */
+        const listenForLoans = () => {
+            if (!db || !isAuthReady || !userId) return;
+
+            const loanQuery = getLoansCollectionRef();
+
+            // onSnapshot provides real-time updates
+            onSnapshot(loanQuery, (snapshot) => {
+                const loans = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    loans.push({ id: doc.id, ...data });
+                });
+                renderLoans(loans);
+            }, (error) => {
+                console.error("Firestore Snapshot Error: ", error);
+                showToast('Failed to fetch real-time data. Check your connection.', 'error');
+                loadingIndicator.classList.add('hidden');
+                noRecordsMessage.classList.remove('hidden');
+            });
+        };
+
+        // --- Event Listeners and Initial Setup ---
+
+        // Auth listeners
+        loginButton.addEventListener('click', handleSignIn);
+        signupButton.addEventListener('click', handleSignUp);
+        signoutButton.addEventListener('click', handleSignOut);
+
+        // App listeners
+        formEl.addEventListener('submit', addLoan);
+        resetPaidBtn.addEventListener('click', attemptResetPaidRecords);
+
+        // Run the setup function when the script loads
+        setupFirebaseAndAuth();
+
+    </script>
+</body>
+</html>
