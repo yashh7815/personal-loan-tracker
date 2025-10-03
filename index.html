@@ -7,7 +7,7 @@
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     <style>
         /* Custom styles for aesthetic enhancements */
         body {
@@ -41,6 +41,11 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* New class for disabled buttons (re-enabling them below, but keeping style) */
+        .auth-disabled {
+            pointer-events: none;
+            opacity: 0.5;
+        }
     </style>
     <!-- Set Firebase log level to Debug for better diagnostics -->
     <script>
@@ -70,6 +75,7 @@
             </div>
 
             <div class="flex space-x-4 pt-2">
+                <!-- Re-enabled but often bypassed by auto-sign-in -->
                 <button type="button" id="login-button" 
                         class="w-full bg-teal-600 text-white p-3 rounded-lg font-semibold hover:bg-teal-700 transition duration-150 disabled:bg-gray-400">
                     Log In
@@ -206,8 +212,8 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // Import signInAnonymously for mock configuration fallback
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Import signInAnonymously and signInWithCustomToken for mandatory auth flow
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection, query, serverTimestamp, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Global Firebase Variables (Mandatory Canvas Globals) ---
@@ -345,21 +351,40 @@
             authErrorEl.textContent = '';
             authErrorEl.classList.add('hidden');
         };
-
+        
         /**
-         * Attempts to sign in anonymously when using mock configuration.
+         * Handles the mandatory initial authentication using custom token or anonymous sign-in.
          */
-        const handleMockSignIn = async () => {
-            try {
-                // Attempt anonymous sign-in, which allows onAuthStateChanged to pick up a user
-                // and proceed to test Firestore functionality.
-                await signInAnonymously(auth);
-                showToast('Auto-signed in anonymously (Mock Mode)', 'info');
-            } catch (error) {
-                console.error("Mock Anonymous Sign In Error:", error);
-                showAuthError("Failed to auto-sign in anonymously. Firestore functionality cannot be tested. Ensure your project allows anonymous sign-in.");
+        const authenticateUser = async (auth) => {
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            
+            // 1. Attempt Sign-in using Custom Token (Mandatory flow for Canvas environment)
+            if (initialAuthToken) {
+                try {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("Signed in with custom token successfully.");
+                } catch (error) {
+                    console.error("Custom Token Sign In Failed:", error);
+                    showAuthError("Automatic sign-in failed. Please ensure environment is correctly configured.");
+                }
+            } 
+            // 2. Fallback to Anonymous Sign-in (for local testing/GitHub where token is missing)
+            else if (isMockMode) {
+                try {
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously (Fallback).");
+                    showToast('Auto-signed in anonymously (Mock Mode)', 'info');
+                } catch (error) {
+                    console.error("Anonymous Sign In Failed:", error);
+                    // This is the error the user sees when Anonymous is disabled but they run locally
+                    // We must show the user the auth screen for manual login/signup
+                    showAuthError("Authentication required. Failed to auto-sign in anonymously. (Note: Email/Password login may be disabled by the project owner.)");
+                }
+            } else {
+                 // Environment is present but no token provided, we wait for user login
+                 console.log("Awaiting manual sign-in or a valid auth token.");
             }
-        }
+        };
 
 
         // --- Firebase Initialization and Auth ---
@@ -368,23 +393,7 @@
          * Initializes Firebase and sets up the auth listener.
          */
         async function setupFirebaseAndAuth() {
-            // Check for mock mode detection based on the defined const isMockMode
-            if (isMockMode) {
-                authContainerEl.classList.remove('hidden');
-                
-                // --- FIX: Disable manual authentication in mock mode ---
-                const authFormEl = document.getElementById('auth-form');
-                // Visually disable the form elements
-                authFormEl.classList.add('pointer-events-none', 'opacity-50');
-                authEmailInput.disabled = true;
-                authPasswordInput.disabled = true;
-                loginButton.disabled = true;
-                signupButton.disabled = true;
-
-                // Show instruction/warning
-                showAuthError('⚠️ WARNING: Mock Configuration Detected. Sign Up/Log In is DISABLED. The app is attempting to auto-sign in anonymously to test functionality.');
-            
-            } else if (!firebaseConfig || !firebaseConfig.apiKey) {
+            if (!firebaseConfig || !firebaseConfig.apiKey) {
                 authContainerEl.classList.remove('hidden');
                 return showAuthError('ERROR: Firebase configuration is missing key parameters.');
             }
@@ -406,7 +415,8 @@
                     userId = user.uid;
                     isAuthReady = true;
                     userIdEl.textContent = userId;
-                    authStatusEl.textContent = isMockMode ? 'Mock User (Anonymous)' : 'Authenticated';
+                    // Check if the user is anonymous to update the status display
+                    authStatusEl.textContent = user.isAnonymous ? 'Anonymous' : 'Authenticated'; 
                     mainAppEl.classList.remove('hidden');
                     authContainerEl.classList.add('hidden');
                     submitButton.disabled = false;
@@ -419,20 +429,16 @@
                     userIdEl.textContent = 'N/A (Signed Out)';
                     authStatusEl.textContent = 'Signed Out';
                     mainAppEl.classList.add('hidden');
-                    // Only show auth container if not in mock mode, otherwise the user is waiting for auto sign-in
-                    if (!isMockMode) {
-                        authContainerEl.classList.remove('hidden');
-                    }
+                    authContainerEl.classList.remove('hidden'); // Show auth screen when signed out
+                    
                     // Clear app content
                     loansListEl.innerHTML = '<p class="text-center text-gray-500 py-8">Please log in to view your records.</p>';
                     totalLoanedEl.textContent = totalAllTimeEl.textContent = totalPaidEl.textContent = '--';
                 }
             });
 
-            // If in mock mode, immediately attempt anonymous sign-in after initialization
-            if (isMockMode) {
-                await handleMockSignIn();
-            }
+            // Initiate automatic sign-in flow
+            await authenticateUser(auth);
         }
 
         /**
@@ -456,8 +462,8 @@
                 } else if (error.code === 'auth/invalid-email') {
                     message = 'The email address is not valid.';
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    // Provide the explicit error message if a proper config is used but feature is disabled
-                    message = 'Error: Email/Password login is not enabled for this project. This is often the case when a Firebase project is not fully configured for this method.';
+                    // This is the error the user originally saw
+                    message = 'Error: Email/Password login is not enabled for this project. Use a different method or enable it in Firebase Console.';
                 }
                 showAuthError(message);
                 console.error("Sign Up Error:", error.code, error.message);
