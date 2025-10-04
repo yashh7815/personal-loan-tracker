@@ -57,14 +57,15 @@
     import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     // 🔹 Firebase Config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyBlpcrpLA14LKvQy_G5GELJNIeG9Sn_yIk",
+  authDomain: "loan-tracker-app-d7e0c.firebaseapp.com",
+  projectId: "loan-tracker-app-d7e0c",
+  storageBucket: "loan-tracker-app-d7e0c.firebasestorage.app",
+  messagingSenderId: "958201169143",
+  appId: "1:958201169143:web:35803b69eb0d18a7a17ff2",
+  measurementId: "G-Q67R68ZWZ3"
+};
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -200,3 +201,4 @@
   </script>
 </body>
 </html>
+
