@@ -1,276 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Personal Loan Tracker</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
-<style>
-body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
-.container-card { box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-.scrollable-list { max-height: 450px; overflow-y: auto; }
-.scrollable-list::-webkit-scrollbar { width: 6px; }
-.scrollable-list::-webkit-scrollbar-thumb { background-color: #a0aec0; border-radius:3px; }
-.spinner { border: 4px solid #f3f3f3; border-top: 4px solid #10b981; border-radius:50%; width:24px; height:24px; animation:spin 1s linear infinite; }
-@keyframes spin {0% {transform:rotate(0deg);}100% {transform:rotate(360deg);}}
-
-#auth-container {
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 1rem;
-  padding: 2rem;
-  max-width: 400px;
-  margin: 6rem auto;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  background-image: url('https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?auto=format&fit=crop&w=800&q=80');
-  background-size: cover;
-  background-position: center;
-  color: #fff;
-}
-#auth-container h2 { text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
-#auth-form input { background: rgba(255,255,255,0.9); color:#000; }
-#auth-form button { font-weight: 600; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loan Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
 </head>
-<body class="min-h-screen p-4 sm:p-8">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
-<!-- Authentication Container -->
-<div id="auth-container">
-  <h2 class="text-3xl font-extrabold mb-6 text-center">Welcome Back!</h2>
-  <div id="auth-error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert"></div>
-  <form id="auth-form" class="space-y-4">
-    <div>
-      <label for="auth-email" class="block text-sm font-medium mb-1">Email Address</label>
-      <input type="email" id="auth-email" required placeholder="you@example.com" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+  <div class="w-full max-w-md bg-white p-6 rounded-xl shadow-lg">
+    <h1 class="text-2xl font-bold text-center mb-4">Loan Tracker</h1>
+
+    <!-- Auth Section -->
+    <div id="auth-section" class="space-y-3">
+      <input id="email" type="email" placeholder="Email" class="w-full p-2 border rounded">
+      <input id="password" type="password" placeholder="Password" class="w-full p-2 border rounded">
+      <button id="signup-btn" class="w-full bg-green-500 text-white py-2 rounded">Sign Up</button>
+      <button id="login-btn" class="w-full bg-blue-500 text-white py-2 rounded">Login</button>
+      <p id="auth-error" class="text-red-500 text-sm"></p>
     </div>
-    <div>
-      <label for="auth-password" class="block text-sm font-medium mb-1">Password</label>
-      <input type="password" id="auth-password" required placeholder="Min 6 characters" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
-    </div>
-    <div class="flex space-x-4 pt-2">
-      <button type="button" id="login-button" class="w-full bg-teal-600 text-white p-3 rounded-lg hover:bg-teal-700 transition duration-150">Log In</button>
-      <button type="button" id="signup-button" class="w-full bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 transition duration-150">Sign Up</button>
-    </div>
-  </form>
-</div>
 
-<!-- Main App -->
-<div id="app" class="max-w-4xl mx-auto hidden">
-<header class="flex justify-between items-center mb-6">
-  <h1 class="text-4xl font-extrabold text-gray-800 flex items-center">Personal Loan Manager</h1>
-  <button id="signout-button" class="bg-red-500 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-red-600 transition">Sign Out</button>
-</header>
-
-<!-- User Info -->
-<div class="mb-6 p-4 bg-white rounded-xl shadow-lg flex justify-between items-center">
-  <p class="text-sm font-medium text-gray-600">Status: <span id="auth-status" class="font-bold text-green-600">Authenticated</span> | User ID: <span id="user-id" class="text-xs text-gray-500 break-all bg-gray-100 p-1 rounded">Loading...</span></p>
-</div>
-
-<!-- Summary -->
-<div id="summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-  <div class="p-5 bg-white rounded-xl container-card border-l-4 border-teal-500"><p class="text-sm font-medium text-gray-500">Current Active Loans (Unpaid)</p><p id="total-loaned" class="mt-1 text-3xl font-semibold text-gray-900">--</p></div>
-  <div class="p-5 bg-white rounded-xl container-card border-l-4 border-amber-500"><p class="text-sm font-medium text-gray-500">Total Money Loaned (All Time)</p><p id="total-all-time" class="mt-1 text-3xl font-semibold text-gray-900">--</p></div>
-  <div class="p-5 bg-white rounded-xl container-card border-l-4 border-green-500"><p class="text-sm font-medium text-gray-500">Total Paid Back</p><p id="total-paid" class="mt-1 text-3xl font-semibold text-gray-900">--</p></div>
-</div>
-
-<!-- Add Loan Form -->
-<div class="bg-white p-6 rounded-xl container-card mb-8">
-<h2 class="text-xl font-bold text-gray-800 mb-4">Record New Loan</h2>
-<form id="add-loan-form" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-  <div class="sm:col-span-2">
-    <label for="borrower-name" class="block text-sm font-medium text-gray-700 mb-1">Borrower Name</label>
-    <input type="text" id="borrower-name" required placeholder="e.g., Jane Doe" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
-  </div>
-  <div>
-    <label for="loan-amount" class="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
-    <input type="number" id="loan-amount" required min="0.01" step="0.01" placeholder="e.g., 5000" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
-  </div>
-  <button type="submit" id="submit-button" class="w-full sm:col-span-1 bg-teal-600 text-white p-2 rounded-lg font-semibold hover:bg-teal-700 transition duration-150">Add Loan</button>
-</form>
-</div>
-
-<!-- Loan List -->
-<div class="bg-white p-6 rounded-xl container-card">
-<h2 class="text-xl font-bold text-gray-800 mb-4">Loan Records</h2>
-<div id="loans-list" class="divide-y divide-gray-100 scrollable-list"></div>
-<p id="no-records-message" class="hidden text-center text-gray-500 py-4">No loans recorded yet.</p>
-</div>
-
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, doc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// ====== Firebase Config ======
-const firebaseConfig = {
-  apiKey: "AIzaSyBlpcrpLA14LKvQy_G5GELJNIeG9Sn_yIk",
-  authDomain: "loan-tracker-app-d7e0c.firebaseapp.com",
-  projectId: "loan-tracker-app-d7e0c",
-  storageBucket: "loan-tracker-app-d7e0c.firebasestorage.app",
-  messagingSenderId: "958201169143",
-  appId: "1:958201169143:web:35803b69eb0d18a7a17ff2",
-  measurementId: "G-Q67R68ZWZ3"
-};
-
-// ====== Initialize Firebase ======
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// ====== Enable Offline Persistence ======
-enableIndexedDbPersistence(db).catch(err => {
-  if (err.code === 'failed-precondition') console.warn('Persistence failed: Multiple tabs open');
-  if (err.code === 'unimplemented') console.warn('Persistence not available');
-});
-
-// ====== DOM Elements ======
-const authContainerEl = document.getElementById('auth-container');
-const loginButton = document.getElementById('login-button');
-const signupButton = document.getElementById('signup-button');
-const signoutButton = document.getElementById('signout-button');
-const authEmailInput = document.getElementById('auth-email');
-const authPasswordInput = document.getElementById('auth-password');
-const authErrorEl = document.getElementById('auth-error-message');
-
-const mainAppEl = document.getElementById('app');
-const userIdEl = document.getElementById('user-id');
-
-const formEl = document.getElementById('add-loan-form');
-const nameInput = document.getElementById('borrower-name');
-const amountInput = document.getElementById('loan-amount');
-const loansListEl = document.getElementById('loans-list');
-const noRecordsMessage = document.getElementById('no-records-message');
-const totalLoanedEl = document.getElementById('total-loaned');
-const totalAllTimeEl = document.getElementById('total-all-time');
-const totalPaidEl = document.getElementById('total-paid');
-
-let userId = null;
-
-// ====== Helper Functions ======
-const formatCurrency = amount => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2}).format(amount);
-const showAuthError = msg => { authErrorEl.textContent = msg; authErrorEl.classList.remove('hidden'); };
-const hideAuthError = () => { authErrorEl.textContent=''; authErrorEl.classList.add('hidden'); };
-const getLoansCollectionRef = () => collection(db, `users/${userId}/loan_records`);
-
-// ====== Auth Functions ======
-const handleSignUp = async () => {
-  hideAuthError();
-  try { await createUserWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value); }
-  catch(e){ showAuthError(e.message); console.error(e); }
-};
-const handleSignIn = async () => {
-  hideAuthError();
-  try { await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value); }
-  catch(e){ showAuthError(e.message); console.error(e); }
-};
-const handleSignOut = async () => { try { await signOut(auth); } catch(e){ console.error(e);} };
-
-// ====== Add Loan ======
-const addLoan = async (e) => {
-  e.preventDefault();
-  if(!userId){ alert('User not authenticated'); return; }
-  const name = nameInput.value.trim();
-  const amount = parseFloat(amountInput.value);
-  if(!name || isNaN(amount) || amount <= 0){ alert('Enter valid data'); return; }
-  try{
-    const docRef = await addDoc(getLoansCollectionRef(), {name, amount, paidAmount:0, isPaid:false, createdAt:serverTimestamp()});
-    console.log('Loan added with ID:', docRef.id);
-    formEl.reset();
-  } catch(e){ console.error('Error adding loan:', e); alert('Failed to add loan'); }
-};
-
-// ====== Delete Loan ======
-const deleteLoan = async (loanId) => { if(confirm("Delete this loan?")) await deleteDoc(doc(db, `users/${userId}/loan_records/${loanId}`)); };
-
-// ====== Render Loans (with inline payment) ======
-const renderLoans = loans => {
-  loansListEl.innerHTML = '';
-  if (loans.length === 0){ noRecordsMessage.classList.remove('hidden'); return; }
-  else noRecordsMessage.classList.add('hidden');
-
-  let totalLoaned=0, totalRemaining=0, totalPaid=0;
-
-  loans.forEach(loan => {
-    const paid = loan.paidAmount || 0;
-    const remaining = loan.amount - paid;
-    totalLoaned += loan.amount;
-    totalPaid += paid;
-    totalRemaining += remaining;
-
-    const loanItem = document.createElement('div');
-    loanItem.className = 'grid grid-cols-1 sm:grid-cols-5 gap-2 p-3 border-b items-center';
-    loanItem.innerHTML = `
-      <div>${loan.name}</div>
-      <div>₹${loan.amount.toFixed(2)}</div>
-      <div>Paid: ₹${paid.toFixed(2)}</div>
-      <div>Remaining: ₹${remaining.toFixed(2)}</div>
-      <div class="flex flex-col sm:flex-row gap-2">
-        <div class="inline-payment hidden flex gap-2">
-          <input type="number" min="0.01" max="${remaining}" step="0.01" placeholder="₹ amount" class="partial-input border rounded px-2 py-1 w-24"/>
-          <button class="bg-green-600 text-white px-2 rounded pay-submit">Submit</button>
-          <button class="bg-gray-400 text-white px-2 rounded pay-cancel">Cancel</button>
-        </div>
-        <button class="bg-green-500 text-white px-2 rounded pay-btn">Pay</button>
-        <button class="bg-red-500 text-white px-2 rounded delete-loan">Delete</button>
+    <!-- Loan Section -->
+    <div id="loan-section" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-semibold">Loans</h2>
+        <button id="logout-btn" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
       </div>
-    `;
 
-    const payBtn = loanItem.querySelector('.pay-btn');
-    const payCancel = loanItem.querySelector('.pay-cancel');
-    const paySubmit = loanItem.querySelector('.pay-submit');
-    const payInput = loanItem.querySelector('.partial-input');
-    const inlinePayment = loanItem.querySelector('.inline-payment');
+      <!-- Add Loan -->
+      <input id="borrower-name" type="text" placeholder="Borrower Name" class="w-full p-2 border rounded">
+      <input id="loan-amount" type="number" placeholder="Amount" class="w-full p-2 border rounded">
+      <button id="add-loan-btn" class="w-full bg-blue-500 text-white py-2 rounded">Add Loan</button>
 
-    payBtn.addEventListener('click', () => {
-      inlinePayment.classList.remove('hidden'); payBtn.classList.add('hidden'); payInput.focus();
+      <!-- Search -->
+      <input id="search-input" type="text" placeholder="Search borrower..." class="w-full p-2 border rounded">
+
+      <!-- Summary -->
+      <div class="bg-gray-100 p-3 rounded-md">
+        <p><strong>Active Loans:</strong> <span id="totalActive">0</span></p>
+        <p><strong>Total Loaned:</strong> <span id="totalLoaned">0</span></p>
+        <p><strong>Total Paid:</strong> <span id="totalPaid">0</span></p>
+      </div>
+
+      <!-- Loan List -->
+      <ul id="loan-list" class="space-y-3"></ul>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    // 🔹 Firebase Config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    enableIndexedDbPersistence(db).catch(() => console.warn("Persistence unavailable"));
+
+    // 🔹 Elements
+    const authSection = document.getElementById("auth-section");
+    const loanSection = document.getElementById("loan-section");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const signupBtn = document.getElementById("signup-btn");
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const authErrorEl = document.getElementById("auth-error");
+    const borrowerInput = document.getElementById("borrower-name");
+    const amountInput = document.getElementById("loan-amount");
+    const addLoanBtn = document.getElementById("add-loan-btn");
+    const loanList = document.getElementById("loan-list");
+    const totalActiveEl = document.getElementById("totalActive");
+    const totalLoanedEl = document.getElementById("totalLoaned");
+    const totalPaidEl = document.getElementById("totalPaid");
+    const searchInput = document.getElementById("search-input");
+
+    let unsubscribeLoans = null;
+    let allLoans = []; // store all loans for search
+
+    // 🔹 Auth Handlers
+    signupBtn.onclick = async () => {
+      try {
+        await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+      } catch (err) {
+        authErrorEl.textContent = err.message;
+      }
+    };
+
+    loginBtn.onclick = async () => {
+      try {
+        await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+      } catch (err) {
+        authErrorEl.textContent = err.message;
+      }
+    };
+
+    logoutBtn.onclick = async () => { await signOut(auth); };
+
+    // 🔹 Add Loan
+    addLoanBtn.onclick = async () => {
+      const borrower = borrowerInput.value.trim();
+      const amount = parseFloat(amountInput.value);
+      if (!borrower || isNaN(amount)) return alert("Enter valid details");
+
+      const user = auth.currentUser;
+      if (!user) return;
+
+      await addDoc(collection(db, "users", user.uid, "loan_records"), {
+        borrower, amount, paidAmount: 0, isPaid: false, createdAt: new Date()
+      });
+
+      borrowerInput.value = "";
+      amountInput.value = "";
+    };
+
+    // 🔹 Listen Auth State
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        authSection.classList.add("hidden");
+        loanSection.classList.remove("hidden");
+
+        const q = query(collection(db, "users", user.uid, "loan_records"), orderBy("createdAt", "desc"));
+        if (unsubscribeLoans) unsubscribeLoans();
+        unsubscribeLoans = onSnapshot(q, (snapshot) => {
+          allLoans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderLoans();
+        });
+      } else {
+        if (unsubscribeLoans) unsubscribeLoans();
+        authSection.classList.remove("hidden");
+        loanSection.classList.add("hidden");
+      }
     });
-    payCancel.addEventListener('click', () => {
-      inlinePayment.classList.add('hidden'); payBtn.classList.remove('hidden'); payInput.value='';
-    });
-    paySubmit.addEventListener('click', async () => {
-      const payment = parseFloat(payInput.value);
-      if(!payment || payment <=0 || payment>remaining){ alert('Invalid payment'); return; }
-      const loanRef = doc(db, `users/${userId}/loan_records/${loan.id}`);
-      const newPaidAmount = paid + payment;
-      await updateDoc(loanRef, { paidAmount:newPaidAmount, isPaid:newPaidAmount>=loan.amount });
-      payInput.value=''; inlinePayment.classList.add('hidden'); payBtn.classList.remove('hidden');
-    });
 
-    loanItem.querySelector('.delete-loan').addEventListener('click', ()=> deleteLoan(loan.id));
+    // 🔹 Render Loans
+    function renderLoans() {
+      const searchText = searchInput.value.toLowerCase();
+      const loans = allLoans.filter(l => l.borrower.toLowerCase().includes(searchText));
 
-    loansListEl.appendChild(loanItem);
-  });
+      loanList.innerHTML = "";
+      let totalLoaned = 0, totalPaid = 0, active = 0;
 
-  totalLoanedEl.textContent = formatCurrency(totalRemaining);
-  totalAllTimeEl.textContent = formatCurrency(totalLoaned);
-  totalPaidEl.textContent = formatCurrency(totalPaid);
-};
+      loans.forEach((loan) => {
+        totalLoaned += loan.amount;
+        totalPaid += loan.paidAmount;
+        if (!loan.isPaid) active += (loan.amount - loan.paidAmount);
 
-// ====== Real-time Listener ======
-onAuthStateChanged(auth, user=>{
-  if(user){
-    userId = user.uid;
-    authContainerEl.classList.add('hidden'); mainAppEl.classList.remove('hidden');
-    userIdEl.textContent = userId;
+        const li = document.createElement("li");
+        li.className = "bg-gray-50 p-3 rounded shadow";
+        li.innerHTML = `
+          <p><strong>${loan.borrower}</strong> - ₹${loan.amount}</p>
+          <p>Paid: ₹${loan.paidAmount} | Remaining: ₹${loan.amount - loan.paidAmount}</p>
+          <div class="flex space-x-2 mt-2">
+            <input type="number" placeholder="Pay amount" class="pay-input p-1 border rounded w-24">
+            <button class="pay-btn bg-green-500 text-white px-2 py-1 rounded text-sm">Pay</button>
+            <button class="del-btn bg-red-500 text-white px-2 py-1 rounded text-sm">Delete</button>
+          </div>
+        `;
 
-    // Real-time listener for loans
-    const loansRef = getLoansCollectionRef();
-    onSnapshot(loansRef, snapshot=>{
-      const loans = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-      renderLoans(loans);
-    });
-  } else {
-    userId=null; authContainerEl.classList.remove('hidden'); mainAppEl.classList.add('hidden');
-  }
-});
+        li.querySelector(".pay-btn").onclick = async () => {
+          const payVal = parseFloat(li.querySelector(".pay-input").value);
+          if (!payVal || payVal <= 0) return alert("Enter valid amount");
 
-// ====== Event Listeners ======
-signupButton.addEventListener('click', handleSignUp);
-loginButton.addEventListener('click', handleSignIn);
-signoutButton.addEventListener('click', handleSignOut);
-formEl.addEventListener('submit', addLoan);
-</script>
+          const newPaid = loan.paidAmount + payVal;
+          await updateDoc(doc(db, "users", auth.currentUser.uid, "loan_records", loan.id), {
+            paidAmount: newPaid,
+            isPaid: newPaid >= loan.amount
+          });
+        };
+
+        li.querySelector(".del-btn").onclick = async () => {
+          await deleteDoc(doc(db, "users", auth.currentUser.uid, "loan_records", loan.id));
+        };
+
+        loanList.appendChild(li);
+      });
+
+      totalActiveEl.textContent = "₹" + active;
+      totalLoanedEl.textContent = "₹" + totalLoaned;
+      totalPaidEl.textContent = "₹" + totalPaid;
+    }
+
+    searchInput.addEventListener("input", renderLoans);
+
+  </script>
 </body>
 </html>
